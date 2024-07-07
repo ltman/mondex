@@ -1,4 +1,4 @@
-module mongo-migrate
+module bitbucket.org/ltman/mondex
 
 go 1.22
 

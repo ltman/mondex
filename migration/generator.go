@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"mongo-migrate/db"
-	"mongo-migrate/schema"
 	"os"
 	"path/filepath"
 	"slices"
 	"time"
+
+	"bitbucket.org/ltman/mondex/db"
+	"bitbucket.org/ltman/mondex/schema"
 )
 
 const (

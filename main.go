@@ -1,7 +1,7 @@
 package main
 
 import (
-	"mongo-migrate/cmd"
+	"bitbucket.org/ltman/mondex/cmd"
 )
 
 func main() {
