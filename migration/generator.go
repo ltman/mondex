@@ -18,7 +18,7 @@ const (
 	filePermissions           = 0644
 	timestampFormat           = "20060102150405"
 	upMigrationFileTemplate   = "%s_%s.up.json"
-	downMigrationFileTemplate = "%s_%s.up.json"
+	downMigrationFileTemplate = "%s_%s.down.json"
 )
 
 var (
@@ -34,10 +34,50 @@ func GenerateMigrationScripts(
 	outputDir, migrationName string,
 	dryRun bool,
 ) error {
+	upCommand, downCommand, err := generateMigrationScripts(ctx, logger, mongoURI, databaseName, schemaFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to generate migration scripts: %w", err)
+	}
+
+	if upCommand == nil && downCommand == nil {
+		logger.Info("No changes detected, skipping migration generation")
+		return nil
+	}
+
+	if dryRun {
+		logger.Info("Dry-run: showing migrations without writing file")
+
+		fmt.Println("Up migration:")
+		if _, err := os.Stdout.Write(upCommand); err != nil {
+			return fmt.Errorf("writing up migration to stdout: %w", err)
+		}
+
+		fmt.Println("\nDown migration:")
+		if _, err := os.Stdout.Write(downCommand); err != nil {
+			return fmt.Errorf("writing down migration to stdout: %w", err)
+		}
+
+		return nil
+	}
+
+	logger.Debug("Writing migration commands to files", "outputDir", outputDir)
+	if err := writeMigrationCommands(upCommand, downCommand, outputDir, migrationName); err != nil {
+		return fmt.Errorf("failed to write migration commands: %w", err)
+	}
+
+	return nil
+}
+
+func generateMigrationScripts(
+	ctx context.Context,
+	logger *slog.Logger,
+	mongoURI, databaseName string,
+	schemaFilePath string,
+) (upMigration, downMigration []byte, err error) {
 	logger.Debug("Connecting to MongoDB")
 	client, err := db.ConnectToMongoDB(ctx, mongoURI)
 	if err != nil {
-		return fmt.Errorf("failed to connect to MongoDB: %w", err)
+		return nil, nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
 	defer func() {
 		if err := client.Disconnect(context.Background()); err != nil {
@@ -48,7 +88,7 @@ func GenerateMigrationScripts(
 	logger.Debug("Reading current schema from MongoDB")
 	current, err := db.ReadCurrentSchema(ctx, client.Database(databaseName))
 	if err != nil {
-		return fmt.Errorf("failed to read current schema: %w", err)
+		return nil, nil, fmt.Errorf("failed to read current schema: %w", err)
 	}
 
 	logger.Debug("Filter current schemas by removing migration-related collections", "collections", collectionsToIgnore)
@@ -57,7 +97,7 @@ func GenerateMigrationScripts(
 	logger.Debug("Reading declared schema from file", "path", schemaFilePath)
 	declared, err := readDeclaredSchema(schemaFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to read declared schema: %w", err)
+		return nil, nil, fmt.Errorf("failed to read declared schema: %w", err)
 	}
 
 	logger.Debug("Filter declared schemas by removing migration-related collections", "collections", collectionsToIgnore)
@@ -66,26 +106,10 @@ func GenerateMigrationScripts(
 	logger.Debug("Generating migration commands")
 	upCommand, downCommand, err := generateMigrationCommands(current, declared, logger)
 	if err != nil {
-		return fmt.Errorf("failed to generate migration commands: %w", err)
+		return nil, nil, fmt.Errorf("failed to generate migration commands: %w", err)
 	}
 
-	if upCommand == nil && downCommand == nil {
-		logger.Info("No changes detected, skipping migration generation")
-		return nil
-	}
-
-	logger.Debug("Writing migration commands to files", "outputDir", outputDir)
-	if dryRun {
-		logger.Info("Dry run: showing changes without writing files")
-		prettyPrintMigrationFiles(upCommand, downCommand)
-	} else {
-		if err := writeMigrationCommands(upCommand, downCommand, outputDir, migrationName); err != nil {
-			return fmt.Errorf("failed to write migration commands: %w", err)
-		}
-		logger.Debug("Successfully wrote migration commands to files", "outputDir", outputDir)
-	}
-
-	return nil
+	return upCommand, downCommand, nil
 }
 
 // indexesDifference calculate index diff between i1 and i2
@@ -234,14 +258,6 @@ func generateDestroyIndexCommands(schemas []schema.Schema) []map[string]interfac
 	}
 
 	return commands
-}
-
-// prettyPrintMigrationFiles print migration commands to stdout
-func prettyPrintMigrationFiles(upCommand, downCommand []byte) {
-	fmt.Println("Up command:")
-	fmt.Println(string(upCommand))
-	fmt.Println("Down command:")
-	fmt.Println(string(downCommand))
 }
 
 // writeMigrationCommands writes the migration commands to files
