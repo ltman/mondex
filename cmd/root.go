@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"mongo-migrate/migration"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 
+	"bitbucket.org/ltman/mondex/migration"
 	"github.com/spf13/cobra"
 )
 
@@ -25,9 +25,7 @@ type Config struct {
 	DryRun         bool
 }
 
-var (
-	cfg Config
-)
+var cfg Config
 
 func Execute() {
 	if err := newRootCmd().Execute(); err != nil {
@@ -46,7 +44,7 @@ func initLogger(level string) (*slog.Logger, error) {
 
 func newRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "mongo-migrate",
+		Use:   "bitbucket.org/ltman/mondex",
 		Short: "MongoDB migration tool",
 	}
 
