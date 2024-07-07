@@ -68,12 +68,6 @@ func registerPersistentFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVar(&cfg.MigrationName, "migration-name", "", "Name of the migration")
 	cmd.PersistentFlags().StringVar(&cfg.LogLevel, "log-level", defaultLogLevel, "Logging level (debug, info, warn, error)")
 	cmd.PersistentFlags().BoolVar(&cfg.DryRun, "dry-run", false, "Show changes without writing files")
-
-	_ = cmd.MarkFlagRequired("mongo-uri")
-	_ = cmd.MarkFlagRequired("database-name")
-	_ = cmd.MarkFlagRequired("schema-file-path")
-	_ = cmd.MarkFlagRequired("output-dir")
-	_ = cmd.MarkFlagRequired("migration-name")
 }
 
 func newDiffCmd() *cobra.Command {
