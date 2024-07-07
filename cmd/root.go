@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -114,15 +113,12 @@ func preRunDiff(_ *cobra.Command, _ []string) error {
 	if _, err := os.Stat(cfg.SchemaFilePath); cfg.SchemaFilePath != "" && err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("schema file does not exist: %s", cfg.SchemaFilePath)
 	}
-	if _, err := os.Stat(cfg.OutputDir); cfg.OutputDir != "" && err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("output directory does not exist: %s", cfg.OutputDir)
-	}
 
 	return nil
 }
 
-func runDiff(_ *cobra.Command, _ []string) error {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+func runDiff(cmd *cobra.Command, _ []string) error {
+	ctx, stop := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	logger, err := initLogger(cfg.LogLevel)
@@ -142,10 +138,6 @@ func runDiff(_ *cobra.Command, _ []string) error {
 	)
 	if err != nil {
 		return fmt.Errorf("failed to generate migration scripts: %w", err)
-	}
-
-	if _, err := os.Stat(cfg.SchemaFilePath); cfg.SchemaFilePath != "" && err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("schema file does not exist: %s", cfg.SchemaFilePath)
 	}
 
 	return nil
@@ -171,8 +163,8 @@ func preRunInspect(_ *cobra.Command, _ []string) error {
 	return nil
 }
 
-func runInspect(_ *cobra.Command, _ []string) error {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+func runInspect(cmd *cobra.Command, _ []string) error {
+	ctx, stop := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	logger, err := initLogger(cfg.LogLevel)
