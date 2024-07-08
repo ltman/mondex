@@ -97,7 +97,7 @@ func preRunDiff(_ *cobra.Command, _ []string) error {
 		missingFields = append(missingFields, "database-name")
 	}
 	if cfg.SchemaFilePath == "" {
-		missingFields = append(missingFields, "schema-file")
+		missingFields = append(missingFields, "schema-file-path")
 	}
 	if !cfg.DryRun && cfg.OutputDir == "" {
 		missingFields = append(missingFields, "output-dir")
@@ -153,7 +153,7 @@ func preRunInspect(_ *cobra.Command, _ []string) error {
 		missingFields = append(missingFields, "database-name")
 	}
 	if !cfg.DryRun && cfg.SchemaFilePath == "" {
-		missingFields = append(missingFields, "schema-file")
+		missingFields = append(missingFields, "schema-file-path")
 	}
 
 	if len(missingFields) > 0 {
