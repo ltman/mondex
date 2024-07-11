@@ -13,7 +13,6 @@ type Schema struct {
 type Index struct {
 	Key              bson.M `json:"key"`
 	Name             string `json:"name"`
-	Version          int    `json:"v"`
 	Background       bool   `json:"background,omitempty"`
 	Unique           bool   `json:"unique,omitempty"`
 	DefaultLanguage  string `json:"default_language,omitempty"`
