@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -12,24 +13,48 @@ import (
 
 	"bitbucket.org/ltman/mondex/migration"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
-	MongoURI       string
-	DatabaseName   string
-	SchemaFilePath string
-	OutputDir      string
-	MigrationName  string
-	LogLevel       string
-	DryRun         bool
+	MongoURI       string `mapstructure:"mongo_uri"`
+	DatabaseName   string `mapstructure:"database_name"`
+	SchemaFilePath string `mapstructure:"schema_file_path"`
+	OutputDir      string `mapstructure:"output_dir"`
+	MigrationName  string `mapstructure:"migration_name"`
+	LogLevel       string `mapstructure:"log_level"`
 }
 
-var cfg Config
+var (
+	cfg     Config
+	cfgFile string
+
+	dryRun bool
+)
 
 func Execute() {
+	cobra.OnInitialize(initConfig)
 	if err := newRootCmd().Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
+	}
+}
+
+func initConfig() {
+	const defaultConfigFile = "mondex.yml"
+
+	if cfgFile != "" {
+		viper.SetConfigFile(cfgFile)
+	} else {
+		viper.SetConfigFile(defaultConfigFile)
+	}
+
+	if err := viper.ReadInConfig(); err == nil {
+		fmt.Println("Using config file:", viper.ConfigFileUsed())
+	}
+
+	if err := viper.Unmarshal(&cfg); err != nil {
+		fmt.Printf("Unable to decode config into struct: %v\n", err)
 	}
 }
 
@@ -43,128 +68,116 @@ func initLogger(level string) (*slog.Logger, error) {
 
 func newRootCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "bitbucket.org/ltman/mondex",
+		Use:   "mondex",
 		Short: "MongoDB migration tool",
 	}
 
-	registerPersistentFlags(cmd)
+	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./mondex.yaml)")
+	cmd.PersistentFlags().String("mongo_uri", "", "MongoDB connection URI")
+	cmd.PersistentFlags().String("database_name", "", "Name of the database")
+	cmd.PersistentFlags().String("schema_file_path", "", "Path to the schema file")
+	cmd.PersistentFlags().String("output_dir", "", "Directory for output files")
+	cmd.PersistentFlags().String("migration_name", "", "Name of the migration")
+	cmd.PersistentFlags().String("log_level", "info", "Logging level (debug, info, warn, error)")
+	cmd.PersistentFlags().BoolVar(&dryRun, "dry_run", false, "Show changes without writing files")
 
-	cmd.AddCommand(
-		newDiffCmd(),
-		newInspectCmd(),
-	)
+	if err := viper.BindPFlags(cmd.PersistentFlags()); err != nil {
+		// Since this is called during initialization, we can't return an error.
+		// Instead, we'll print the error and exit.
+		fmt.Printf("Error binding flags: %v\n", err)
+		os.Exit(1)
+	}
+
+	cmd.AddCommand(newDiffCmd(), newInspectCmd())
 
 	return cmd
 }
 
-func registerPersistentFlags(cmd *cobra.Command) {
-	const defaultLogLevel = "info"
-
-	cmd.PersistentFlags().StringVar(&cfg.MongoURI, "mongo-uri", "", "MongoDB connection URI")
-	cmd.PersistentFlags().StringVar(&cfg.DatabaseName, "database-name", "", "Name of the database")
-	cmd.PersistentFlags().StringVar(&cfg.SchemaFilePath, "schema-file-path", "", "Path to the schema file")
-	cmd.PersistentFlags().StringVar(&cfg.OutputDir, "output-dir", "", "Directory for output files")
-	cmd.PersistentFlags().StringVar(&cfg.MigrationName, "migration-name", "", "Name of the migration")
-	cmd.PersistentFlags().StringVar(&cfg.LogLevel, "log-level", defaultLogLevel, "Logging level (debug, info, warn, error)")
-	cmd.PersistentFlags().BoolVar(&cfg.DryRun, "dry-run", false, "Show changes without writing files")
-}
-
 func newDiffCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "diff",
-		Short:   "Generate migration scripts based on schema differences",
-		PreRunE: preRunDiff,
-		RunE:    runDiff,
+		Use:   "diff",
+		Short: "Generate migration scripts based on schema differences",
+		RunE:  runDiff,
 	}
 }
 
 func newInspectCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "inspect",
-		Short:   "Inspect and output the current database schema",
-		PreRunE: preRunInspect,
-		RunE:    runInspect,
+		Use:   "inspect",
+		Short: "Inspect and output the current database schema",
+		RunE:  runInspect,
 	}
 }
 
-func preRunDiff(_ *cobra.Command, _ []string) error {
+func validateConfig(requiredFields []string) error {
 	var missingFields []string
-
-	if cfg.MongoURI == "" {
-		missingFields = append(missingFields, "mongo-uri")
-	}
-	if cfg.DatabaseName == "" {
-		missingFields = append(missingFields, "database-name")
-	}
-	if cfg.SchemaFilePath == "" {
-		missingFields = append(missingFields, "schema-file-path")
-	}
-	if !cfg.DryRun && cfg.OutputDir == "" {
-		missingFields = append(missingFields, "output-dir")
-	}
-	if !cfg.DryRun && cfg.MigrationName == "" {
-		missingFields = append(missingFields, "migration-name")
+	for _, field := range requiredFields {
+		if viper.GetString(field) == "" {
+			missingFields = append(missingFields, field)
+		}
 	}
 
 	if len(missingFields) > 0 {
-		return fmt.Errorf("missing required fields:\n  - %v", strings.Join(missingFields, "\n  - "))
+		return fmt.Errorf("missing required fields: %s", strings.Join(missingFields, ", "))
 	}
 
-	if _, err := os.Stat(cfg.SchemaFilePath); cfg.SchemaFilePath != "" && err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return fmt.Errorf("schema file does not exist: %s", cfg.SchemaFilePath)
+	if cfg.SchemaFilePath != "" {
+		if _, err := os.Stat(cfg.SchemaFilePath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("schema file does not exist: %s", cfg.SchemaFilePath)
+		}
 	}
 
 	return nil
 }
 
 func runDiff(cmd *cobra.Command, _ []string) error {
-	ctx, stop := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	logger, err := initLogger(cfg.LogLevel)
-	if err != nil {
-		return fmt.Errorf("failed to initialize logger: %w", err)
+	requiredFields := []string{"mongo_uri", "database_name", "schema_file_path"}
+	if !dryRun {
+		requiredFields = append(requiredFields, "output_dir", "migration_name")
 	}
 
-	logger.Debug("Starting migration script generator")
-
-	err = migration.GenerateMigrationScripts(
-		ctx,
-		logger,
-		cfg.MongoURI, cfg.DatabaseName,
-		cfg.SchemaFilePath,
-		cfg.OutputDir, cfg.MigrationName,
-		cfg.DryRun,
-	)
-	if err != nil {
-		return fmt.Errorf("failed to generate migration scripts: %w", err)
+	if err := validateConfig(requiredFields); err != nil {
+		return err
 	}
 
-	return nil
-}
-
-func preRunInspect(_ *cobra.Command, _ []string) error {
-	var missingFields []string
-
-	if cfg.MongoURI == "" {
-		missingFields = append(missingFields, "mongo-uri")
-	}
-	if cfg.DatabaseName == "" {
-		missingFields = append(missingFields, "database-name")
-	}
-	if !cfg.DryRun && cfg.SchemaFilePath == "" {
-		missingFields = append(missingFields, "schema-file-path")
-	}
-
-	if len(missingFields) > 0 {
-		return fmt.Errorf("missing required fields:\n  - %v", strings.Join(missingFields, "\n  - "))
-	}
-
-	return nil
+	return runWithContext(cmd.Context(), func(ctx context.Context, logger *slog.Logger, config Config) error {
+		return migration.GenerateMigrationScripts(
+			ctx,
+			logger,
+			config.MongoURI,
+			config.DatabaseName,
+			config.SchemaFilePath,
+			config.OutputDir,
+			config.MigrationName,
+			dryRun,
+		)
+	})
 }
 
 func runInspect(cmd *cobra.Command, _ []string) error {
-	ctx, stop := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
+	requiredFields := []string{"mongo_uri", "database_name"}
+	if !dryRun {
+		requiredFields = append(requiredFields, "schema_file_path")
+	}
+
+	if err := validateConfig(requiredFields); err != nil {
+		return err
+	}
+
+	return runWithContext(cmd.Context(), func(ctx context.Context, logger *slog.Logger, config Config) error {
+		return migration.InspectCurrentSchema(
+			ctx,
+			logger,
+			config.MongoURI,
+			config.DatabaseName,
+			config.SchemaFilePath,
+			dryRun,
+		)
+	})
+}
+
+func runWithContext(ctx context.Context, fn func(context.Context, *slog.Logger, Config) error) error {
+	ctx, stop := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	logger, err := initLogger(cfg.LogLevel)
@@ -172,17 +185,11 @@ func runInspect(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
 
-	logger.Debug("Starting migration script generator")
+	logger.Debug("Starting operation")
 
-	err = migration.InspectCurrentSchema(
-		ctx,
-		logger,
-		cfg.MongoURI, cfg.DatabaseName,
-		cfg.SchemaFilePath,
-		cfg.DryRun,
-	)
+	err = fn(ctx, logger, cfg)
 	if err != nil {
-		return fmt.Errorf("failed to generate migration scripts: %w", err)
+		return fmt.Errorf("operation failed: %w", err)
 	}
 
 	return nil
