@@ -1,7 +1,9 @@
 package db
 
 import (
+	"cmp"
 	"context"
+	"slices"
 	"time"
 
 	"bitbucket.org/ltman/mondex/schema"
@@ -24,6 +26,9 @@ func ReadCurrentSchema(ctx context.Context, db *mongo.Database) ([]schema.Schema
 		return nil, err
 	}
 
+	// Sort the collection names to ensure consistent ordering
+	slices.Sort(collections)
+
 	schemas := make([]schema.Schema, 0)
 
 	for _, collectionName := range collections {
@@ -37,6 +42,11 @@ func ReadCurrentSchema(ctx context.Context, db *mongo.Database) ([]schema.Schema
 		if err := cursor.All(ctx, &collectionIndexes); err != nil {
 			return nil, err
 		}
+
+		// Sort the indexes by their names to ensure consistent ordering
+		slices.SortFunc(collectionIndexes, func(a, b schema.Index) int {
+			return cmp.Compare(a.Name, b.Name)
+		})
 
 		schemas = append(schemas, schema.Schema{
 			Collection: collectionName,
