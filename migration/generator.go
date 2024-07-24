@@ -25,7 +25,7 @@ func GenerateMigrationScripts(
 	logger *slog.Logger,
 	mongoURI, databaseName string,
 	schemaFilePath string,
-	outputDir, migrationName string,
+	migrationDir, migrationName string,
 	dryRun bool,
 ) error {
 	upCommand, downCommand, err := generateMigrationScripts(ctx, logger, mongoURI, databaseName, schemaFilePath)
@@ -54,8 +54,8 @@ func GenerateMigrationScripts(
 		return nil
 	}
 
-	logger.Debug("Writing migration commands to files", "outputDir", outputDir)
-	if err := writeMigrationCommands(upCommand, downCommand, outputDir, migrationName); err != nil {
+	logger.Debug("Writing migration commands to files", "migrationDir", migrationDir)
+	if err := writeMigrationCommands(upCommand, downCommand, migrationDir, migrationName); err != nil {
 		return fmt.Errorf("failed to write migration commands: %w", err)
 	}
 
@@ -255,22 +255,22 @@ func generateDestroyIndexCommands(schemas []schema.Schema) []map[string]interfac
 }
 
 // writeMigrationCommands writes the migration commands to files
-func writeMigrationCommands(upCommand, downCommand []byte, outputDir, migrationName string) error {
-	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
+func writeMigrationCommands(upCommand, downCommand []byte, migrationDir, migrationName string) error {
+	if err := os.MkdirAll(migrationDir, os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	version, err := getNextVersion(outputDir)
+	version, err := getNextVersion(migrationDir)
 	if err != nil {
 		return fmt.Errorf("failed to determine next version: %w", err)
 	}
 
-	upCommandFilePath := filepath.Join(outputDir, fmt.Sprintf("%06d_%s.up.json", version, migrationName))
+	upCommandFilePath := filepath.Join(migrationDir, fmt.Sprintf("%06d_%s.up.json", version, migrationName))
 	if err := os.WriteFile(upCommandFilePath, upCommand, 0644); err != nil {
 		return fmt.Errorf("failed to write up command: %w", err)
 	}
 
-	downCommandFilePath := filepath.Join(outputDir, fmt.Sprintf("%06d_%s.down.json", version, migrationName))
+	downCommandFilePath := filepath.Join(migrationDir, fmt.Sprintf("%06d_%s.down.json", version, migrationName))
 	if err := os.WriteFile(downCommandFilePath, downCommand, 0644); err != nil {
 		return fmt.Errorf("failed to write down command: %w", err)
 	}
@@ -279,8 +279,8 @@ func writeMigrationCommands(upCommand, downCommand []byte, outputDir, migrationN
 }
 
 // getNextVersion determines the next version number for a migration file.
-func getNextVersion(outputDir string) (uint64, error) {
-	matches, err := filepath.Glob(filepath.Join(outputDir, "*.json"))
+func getNextVersion(migrationDir string) (uint64, error) {
+	matches, err := filepath.Glob(filepath.Join(migrationDir, "*.json"))
 	if err != nil {
 		return 0, fmt.Errorf("failed to match migration commands: %w", err)
 	}
