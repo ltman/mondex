@@ -21,7 +21,7 @@ type Config struct {
 	DatabaseName   string `mapstructure:"database_name"`
 	SchemaFilePath string `mapstructure:"schema_file_path"`
 	MigrationDir   string `mapstructure:"migration_dir"`
-	MigrationName  string `mapstructure:"migration_name"`
+	MigrationName  string `mapstructure:"-"`
 	LogLevel       string `mapstructure:"log_level"`
 }
 
@@ -77,7 +77,6 @@ func newRootCmd() *cobra.Command {
 	cmd.PersistentFlags().String("database_name", "", "Name of the database")
 	cmd.PersistentFlags().String("schema_file_path", "", "Path to the schema file")
 	cmd.PersistentFlags().String("migration_dir", "", "Directory for migration files")
-	cmd.PersistentFlags().String("migration_name", "", "Name of the migration")
 	cmd.PersistentFlags().String("log_level", "info", "Logging level (debug, info, warn, error)")
 	cmd.PersistentFlags().BoolVar(&dryRun, "dry_run", false, "Show changes without writing files")
 
@@ -103,8 +102,9 @@ func newApplyCmd() *cobra.Command {
 
 func newDiffCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "diff",
+		Use:   "diff [migration_name]",
 		Short: "Generate migration scripts based on schema differences",
+		Args:  cobra.MaximumNArgs(1),
 		RunE:  runDiff,
 	}
 }
@@ -159,9 +159,12 @@ func runApply(cmd *cobra.Command, _ []string) error {
 	})
 }
 
-func runDiff(cmd *cobra.Command, _ []string) error {
+func runDiff(cmd *cobra.Command, args []string) error {
 	requiredFields := []string{"mongo_uri", "database_name", "schema_file_path"}
 	if !dryRun {
+		if len(args) == 1 {
+			cfg.MigrationName = args[0]
+		}
 		requiredFields = append(requiredFields, "migration_dir", "migration_name")
 	}
 
