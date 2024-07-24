@@ -20,7 +20,7 @@ type Config struct {
 	MongoURI       string `mapstructure:"mongo_uri"`
 	DatabaseName   string `mapstructure:"database_name"`
 	SchemaFilePath string `mapstructure:"schema_file_path"`
-	OutputDir      string `mapstructure:"output_dir"`
+	MigrationDir   string `mapstructure:"migration_dir"`
 	MigrationName  string `mapstructure:"migration_name"`
 	LogLevel       string `mapstructure:"log_level"`
 }
@@ -76,7 +76,7 @@ func newRootCmd() *cobra.Command {
 	cmd.PersistentFlags().String("mongo_uri", "", "MongoDB connection URI")
 	cmd.PersistentFlags().String("database_name", "", "Name of the database")
 	cmd.PersistentFlags().String("schema_file_path", "", "Path to the schema file")
-	cmd.PersistentFlags().String("output_dir", "", "Directory for output files")
+	cmd.PersistentFlags().String("migration_dir", "", "Directory for migration files")
 	cmd.PersistentFlags().String("migration_name", "", "Name of the migration")
 	cmd.PersistentFlags().String("log_level", "info", "Logging level (debug, info, warn, error)")
 	cmd.PersistentFlags().BoolVar(&dryRun, "dry_run", false, "Show changes without writing files")
@@ -88,9 +88,17 @@ func newRootCmd() *cobra.Command {
 		os.Exit(1)
 	}
 
-	cmd.AddCommand(newDiffCmd(), newInspectCmd())
+	cmd.AddCommand(newApplyCmd(), newDiffCmd(), newInspectCmd())
 
 	return cmd
+}
+
+func newApplyCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "apply",
+		Short: "Apply current migrations",
+		RunE:  runApply,
+	}
 }
 
 func newDiffCmd() *cobra.Command {
@@ -130,10 +138,31 @@ func validateConfig(requiredFields []string) error {
 	return nil
 }
 
+func runApply(cmd *cobra.Command, _ []string) error {
+	requiredFields := []string{"mongo_uri", "database_name", "migration_dir"}
+	if dryRun {
+		return fmt.Errorf("apply command doesn't support dry run mode")
+	}
+
+	if err := validateConfig(requiredFields); err != nil {
+		return err
+	}
+
+	return runWithContext(cmd.Context(), func(ctx context.Context, logger *slog.Logger, config Config) error {
+		return migration.ApplyMigrations(
+			ctx,
+			logger,
+			config.MongoURI,
+			config.DatabaseName,
+			config.MigrationDir,
+		)
+	})
+}
+
 func runDiff(cmd *cobra.Command, _ []string) error {
 	requiredFields := []string{"mongo_uri", "database_name", "schema_file_path"}
 	if !dryRun {
-		requiredFields = append(requiredFields, "output_dir", "migration_name")
+		requiredFields = append(requiredFields, "migration_dir", "migration_name")
 	}
 
 	if err := validateConfig(requiredFields); err != nil {
@@ -147,7 +176,7 @@ func runDiff(cmd *cobra.Command, _ []string) error {
 			config.MongoURI,
 			config.DatabaseName,
 			config.SchemaFilePath,
-			config.OutputDir,
+			config.MigrationDir,
 			config.MigrationName,
 			dryRun,
 		)
