@@ -7,7 +7,6 @@ Mondex is a MongoDB index managing tool built on top of [golang-migrate](https:/
 - **Seamless Integration**: Integrates with `golang-migrate` to apply migrations to MongoDB.
 - **Easy Setup**: Quickly set up and manage your MongoDB indexes.
 - **Structured Logging**: Provides detailed and structured logging for better traceability.
-- **Context-Aware Operations**: Uses Go's `context.Context` for clean shutdowns and interruption handling.
 
 ## Installation
 
