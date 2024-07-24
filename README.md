@@ -12,7 +12,7 @@ Mondex is a MongoDB index managing tool built on top of [golang-migrate](https:/
 ## Installation
 
 ```sh
-go install bitbucket.org/ltman/mondex@latest
+go install github.com/ltman/mondex@latest
 ```
 
 ## Usage

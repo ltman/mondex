@@ -11,7 +11,7 @@ import (
 	"strings"
 	"syscall"
 
-	"bitbucket.org/ltman/mondex/migration"
+	"github.com/ltman/mondex/migration"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"log/slog"
 
-	"bitbucket.org/ltman/mondex/db"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/mongodb"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/ltman/mondex/db"
 )
 
 func ApplyMigrations(

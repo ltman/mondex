@@ -1,4 +1,4 @@
-module bitbucket.org/ltman/mondex
+module github.com/ltman/mondex
 
 go 1.22
 

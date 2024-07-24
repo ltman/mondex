@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"os"
 
-	"bitbucket.org/ltman/mondex/db"
+	"github.com/ltman/mondex/db"
 )
 
 func InspectCurrentSchema(
