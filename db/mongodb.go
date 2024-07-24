@@ -6,7 +6,7 @@ import (
 	"slices"
 	"time"
 
-	"bitbucket.org/ltman/mondex/schema"
+	"github.com/ltman/mondex/schema"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

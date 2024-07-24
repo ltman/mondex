@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"bitbucket.org/ltman/mondex/db"
-	"bitbucket.org/ltman/mondex/schema"
+	"github.com/ltman/mondex/db"
+	"github.com/ltman/mondex/schema"
 )
 
 var (
