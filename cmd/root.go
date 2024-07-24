@@ -87,7 +87,7 @@ func newRootCmd() *cobra.Command {
 		os.Exit(1)
 	}
 
-	cmd.AddCommand(newApplyCmd(), newDiffCmd(), newInspectCmd())
+	cmd.AddCommand(newApplyCmd(), newDiffCmd(), newFormatCmd(), newInspectCmd())
 
 	return cmd
 }
@@ -106,6 +106,14 @@ func newDiffCmd() *cobra.Command {
 		Short: "Generate migration scripts based on schema differences",
 		Args:  cobra.MaximumNArgs(1),
 		RunE:  runDiff,
+	}
+}
+
+func newFormatCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "format",
+		Short: "Format current schema file",
+		RunE:  runFormat,
 	}
 }
 
@@ -181,6 +189,23 @@ func runDiff(cmd *cobra.Command, args []string) error {
 			config.SchemaFilePath,
 			config.MigrationDir,
 			config.MigrationName,
+			dryRun,
+		)
+	})
+}
+
+func runFormat(cmd *cobra.Command, _ []string) error {
+	requiredFields := []string{"schema_file_path"}
+
+	if err := validateConfig(requiredFields); err != nil {
+		return err
+	}
+
+	return runWithContext(cmd.Context(), func(ctx context.Context, logger *slog.Logger, config Config) error {
+		return migration.FormatSchemaFile(
+			ctx,
+			logger,
+			config.SchemaFilePath,
 			dryRun,
 		)
 	})

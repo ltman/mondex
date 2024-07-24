@@ -46,6 +46,14 @@ Generate migration scripts based on schema differences:
 mondex diff your_migration_name
 ```
 
+#### Format Schema File
+
+Format the database schema file:
+
+```sh
+mondex format
+```
+
 #### Inspect Database Schema
 
 Inspect and output the current database schema:
