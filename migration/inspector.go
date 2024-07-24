@@ -34,7 +34,7 @@ func InspectCurrentSchema(
 	}
 
 	logger.Info("Writing current schema to file", "path", schemaFilePath)
-	if err := os.WriteFile(schemaFilePath, schemas, filePermissions); err != nil {
+	if err := os.WriteFile(schemaFilePath, schemas, 0644); err != nil {
 		return fmt.Errorf("writing current schema: %w", err)
 	}
 

@@ -8,17 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"time"
+	"strconv"
+	"strings"
 
 	"bitbucket.org/ltman/mondex/db"
 	"bitbucket.org/ltman/mondex/schema"
-)
-
-const (
-	filePermissions           = 0644
-	timestampFormat           = "20060102150405"
-	upMigrationFileTemplate   = "%s_%s.up.json"
-	downMigrationFileTemplate = "%s_%s.down.json"
 )
 
 var (
@@ -266,17 +260,46 @@ func writeMigrationCommands(upCommand, downCommand []byte, outputDir, migrationN
 		return fmt.Errorf("failed to create output directory: %w", err)
 	}
 
-	timestamp := time.Now().Format(timestampFormat)
+	version, err := getNextVersion(outputDir)
+	if err != nil {
+		return fmt.Errorf("failed to determine next version: %w", err)
+	}
 
-	upCommandFilePath := filepath.Join(outputDir, fmt.Sprintf(upMigrationFileTemplate, timestamp, migrationName))
-	if err := os.WriteFile(upCommandFilePath, upCommand, filePermissions); err != nil {
+	upCommandFilePath := filepath.Join(outputDir, fmt.Sprintf("%06d_%s.up.json", version, migrationName))
+	if err := os.WriteFile(upCommandFilePath, upCommand, 0644); err != nil {
 		return fmt.Errorf("failed to write up command: %w", err)
 	}
 
-	downCommandFilePath := filepath.Join(outputDir, fmt.Sprintf(downMigrationFileTemplate, timestamp, migrationName))
-	if err := os.WriteFile(downCommandFilePath, downCommand, filePermissions); err != nil {
+	downCommandFilePath := filepath.Join(outputDir, fmt.Sprintf("%06d_%s.down.json", version, migrationName))
+	if err := os.WriteFile(downCommandFilePath, downCommand, 0644); err != nil {
 		return fmt.Errorf("failed to write down command: %w", err)
 	}
 
 	return nil
+}
+
+// getNextVersion determines the next version number for a migration file.
+func getNextVersion(outputDir string) (uint64, error) {
+	matches, err := filepath.Glob(filepath.Join(outputDir, "*.json"))
+	if err != nil {
+		return 0, fmt.Errorf("failed to match migration commands: %w", err)
+	}
+
+	if len(matches) == 0 {
+		return 1, nil
+	}
+
+	slices.Sort(matches)
+	lastFile := filepath.Base(matches[len(matches)-1])
+	parts := strings.SplitN(lastFile, "_", 2)
+	if len(parts) < 2 {
+		return 0, fmt.Errorf("malformed migration filename: %s", lastFile)
+	}
+
+	currentSeq, err := strconv.ParseUint(parts[0], 10, 64)
+	if err != nil {
+		return 0, fmt.Errorf("malformed migration filename: %s", lastFile)
+	}
+
+	return currentSeq + 1, nil
 }
