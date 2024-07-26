@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -170,7 +171,9 @@ func runApply(cmd *cobra.Command, _ []string) error {
 func runDiff(cmd *cobra.Command, args []string) error {
 	requiredFields := []string{"mongo_uri", "database_name", "schema_file_path"}
 	if !dryRun {
+		log.Println(args)
 		if len(args) == 1 {
+			viper.Set("migration_name", args[0])
 			cfg.MigrationName = args[0]
 		}
 		requiredFields = append(requiredFields, "migration_dir", "migration_name")
