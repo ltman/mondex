@@ -15,6 +15,7 @@ type Index struct {
 	Name             string `json:"name"`
 	Background       bool   `json:"background,omitempty"`
 	Unique           bool   `json:"unique,omitempty"`
+	Sparse           bool   `json:"sparse,omitempty"`
 	DefaultLanguage  string `json:"default_language,omitempty"`
 	LanguageOverride string `json:"language_override,omitempty"`
 	TextIndexVersion int    `json:"textIndexVersion,omitempty"`
