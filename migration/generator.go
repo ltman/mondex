@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -282,24 +283,31 @@ func writeMigrationCommands(upCommand, downCommand []byte, migrationDir, migrati
 func getNextVersion(migrationDir string) (uint64, error) {
 	matches, err := filepath.Glob(filepath.Join(migrationDir, "*.json"))
 	if err != nil {
-		return 0, fmt.Errorf("failed to match migration commands: %w", err)
+		return 0, fmt.Errorf("failed to match migration files: %w", err)
 	}
 
 	if len(matches) == 0 {
 		return 1, nil
 	}
 
-	slices.Sort(matches)
-	lastFile := filepath.Base(matches[len(matches)-1])
-	parts := strings.SplitN(lastFile, "_", 2)
-	if len(parts) < 2 {
-		return 0, fmt.Errorf("malformed migration filename: %s", lastFile)
+	var maxVersion uint64
+	for _, match := range matches {
+		filename := filepath.Base(match)
+		parts := strings.SplitN(filename, "_", 2)
+		if len(parts) < 2 {
+			continue
+		}
+
+		version, err := strconv.ParseUint(parts[0], 10, 64)
+		if err != nil {
+			log.Printf("Warning: malformed migration filename: %s", filename)
+			continue
+		}
+
+		if version > maxVersion {
+			maxVersion = version
+		}
 	}
 
-	currentSeq, err := strconv.ParseUint(parts[0], 10, 64)
-	if err != nil {
-		return 0, fmt.Errorf("malformed migration filename: %s", lastFile)
-	}
-
-	return currentSeq + 1, nil
+	return maxVersion + 1, nil
 }
