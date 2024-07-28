@@ -47,5 +47,5 @@ func (i Index) MarshalJSON() ([]byte, error) {
 }
 
 func (i *Index) UnmarshalJSON(bytes []byte) error {
-	return bson.Unmarshal(bytes, &i)
+	return bson.UnmarshalExtJSON(bytes, false, &i)
 }
