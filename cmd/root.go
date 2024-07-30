@@ -35,7 +35,11 @@ var (
 
 func Execute() {
 	cobra.OnInitialize(initConfig)
-	if err := newRootCmd().Execute(); err != nil {
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	if err := newRootCmd().ExecuteContext(ctx); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
