@@ -6,6 +6,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"slices"
+
+	"github.com/ltman/mondex/schema"
 )
 
 func FormatSchemaFile(
@@ -17,6 +20,12 @@ func FormatSchemaFile(
 	declared, err := readDeclaredSchema(schemaFilePath)
 	if err != nil {
 		return fmt.Errorf("reading declared schema: %w", err)
+	}
+
+	filterSchemas(declared)
+	for i, d := range declared {
+		d.Indexes = filterIndexes(d.Indexes)
+		declared[i] = d
 	}
 
 	schemas, err := json.MarshalIndent(declared, "", "  ")
@@ -38,4 +47,20 @@ func FormatSchemaFile(
 	}
 
 	return nil
+}
+
+// filterSchemas removes ignored collections from the schema list
+func filterSchemas(schemas []schema.Schema) []schema.Schema {
+	filtered := slices.Clone(schemas)
+	return slices.DeleteFunc(filtered, func(s schema.Schema) bool {
+		return slices.Contains(collectionsToIgnore, s.Collection)
+	})
+}
+
+// filterIndexes removes non-modifiable indexes
+func filterIndexes(indexes []schema.Index) []schema.Index {
+	filtered := slices.Clone(indexes)
+	return slices.DeleteFunc(filtered, func(i schema.Index) bool {
+		return slices.Contains(indexesToIgnore, i.Name)
+	})
 }

@@ -1,9 +1,7 @@
 package db
 
 import (
-	"cmp"
 	"context"
-	"slices"
 	"time"
 
 	"github.com/ltman/mondex/schema"
@@ -12,7 +10,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const mongoConnectTimeout = 10 * time.Second
+const (
+	mongoConnectTimeout = 10 * time.Second
+)
 
 func ConnectToMongoDB(ctx context.Context, uri string) (*mongo.Client, error) {
 	ctx, cancel := context.WithTimeout(ctx, mongoConnectTimeout)
@@ -25,9 +25,6 @@ func ReadCurrentSchema(ctx context.Context, db *mongo.Database) ([]schema.Schema
 	if err != nil {
 		return nil, err
 	}
-
-	// Sort the collection names to ensure consistent ordering
-	slices.Sort(collections)
 
 	schemas := make([]schema.Schema, 0)
 
@@ -42,11 +39,6 @@ func ReadCurrentSchema(ctx context.Context, db *mongo.Database) ([]schema.Schema
 		if err := cursor.All(ctx, &collectionIndexes); err != nil {
 			return nil, err
 		}
-
-		// Sort the indexes by their names to ensure consistent ordering
-		slices.SortFunc(collectionIndexes, func(a, b schema.Index) int {
-			return cmp.Compare(a.Name, b.Name)
-		})
 
 		schemas = append(schemas, schema.Schema{
 			Collection: collectionName,
