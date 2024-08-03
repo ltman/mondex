@@ -63,11 +63,5 @@ func inspectCurrentSchema(
 		return nil, fmt.Errorf("failed to read current schema: %w", err)
 	}
 
-	filterSchemas(current)
-	for i, c := range current {
-		c.Indexes = filterIndexes(c.Indexes)
-		current[i] = c
-	}
-
-	return json.MarshalIndent(current, "", "  ")
+	return json.MarshalIndent(prepareSchemas(current), "", "  ")
 }
