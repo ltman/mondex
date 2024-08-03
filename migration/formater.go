@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,13 +23,7 @@ func FormatSchemaFile(
 		return fmt.Errorf("reading declared schema: %w", err)
 	}
 
-	filterSchemas(declared)
-	for i, d := range declared {
-		d.Indexes = filterIndexes(d.Indexes)
-		declared[i] = d
-	}
-
-	schemas, err := json.MarshalIndent(declared, "", "  ")
+	schemas, err := json.MarshalIndent(prepareSchemas(declared), "", "  ")
 
 	if dryRun {
 		logger.Info("Dry-run: showing schema without writing file")
@@ -49,18 +44,21 @@ func FormatSchemaFile(
 	return nil
 }
 
-// filterSchemas removes ignored collections from the schema list
-func filterSchemas(schemas []schema.Schema) []schema.Schema {
-	filtered := slices.Clone(schemas)
-	return slices.DeleteFunc(filtered, func(s schema.Schema) bool {
+func prepareSchemas(schemas []schema.Schema) []schema.Schema {
+	schemas = slices.DeleteFunc(slices.Clone(schemas), func(s schema.Schema) bool {
 		return slices.Contains(collectionsToIgnore, s.Collection)
 	})
-}
-
-// filterIndexes removes non-modifiable indexes
-func filterIndexes(indexes []schema.Index) []schema.Index {
-	filtered := slices.Clone(indexes)
-	return slices.DeleteFunc(filtered, func(i schema.Index) bool {
-		return slices.Contains(indexesToIgnore, i.Name)
+	slices.SortFunc(schemas, func(a, b schema.Schema) int {
+		return cmp.Compare(a.Collection, b.Collection)
 	})
+	for i, sc := range schemas {
+		sc.Indexes = slices.DeleteFunc(sc.Indexes, func(i schema.Index) bool {
+			return slices.Contains(indexesToIgnore, i.Name)
+		})
+		slices.SortFunc(sc.Indexes, func(a, b schema.Index) int {
+			return cmp.Compare(a.Name, b.Name)
+		})
+		schemas[i] = sc
+	}
+	return schemas
 }

@@ -87,7 +87,7 @@ func generateMigrationScripts(
 	}
 
 	logger.Debug("Filter current schemas by removing migration-related collections", "collections", collectionsToIgnore)
-	current = filterSchemas(current)
+	current = prepareSchemas(current)
 
 	logger.Debug("Reading declared schema from file", "path", schemaFilePath)
 	declared, err := readDeclaredSchema(schemaFilePath)
@@ -96,7 +96,7 @@ func generateMigrationScripts(
 	}
 
 	logger.Debug("Filter declared schemas by removing migration-related collections", "collections", collectionsToIgnore)
-	declared = filterSchemas(declared)
+	declared = prepareSchemas(declared)
 
 	logger.Debug("Generating migration commands")
 	upCommand, downCommand, err := generateMigrationCommands(current, declared, logger)
@@ -201,13 +201,10 @@ func generateCreateIndexesCommands(schemas []schema.Schema) []map[string]interfa
 	commands := make([]map[string]interface{}, 0, len(schemas))
 
 	for _, s := range schemas {
-		filtered := filterIndexes(s.Indexes)
-		if len(filtered) > 0 {
-			commands = append(commands, map[string]interface{}{
-				"createIndexes": s.Collection,
-				"indexes":       filtered,
-			})
-		}
+		commands = append(commands, map[string]interface{}{
+			"createIndexes": s.Collection,
+			"indexes":       s.Indexes,
+		})
 	}
 
 	return commands
@@ -218,13 +215,8 @@ func generateDestroyIndexCommands(schemas []schema.Schema) []map[string]interfac
 	commands := make([]map[string]interface{}, 0, len(schemas))
 
 	for _, s := range schemas {
-		filtered := filterIndexes(s.Indexes)
-		if len(filtered) == 0 {
-			continue
-		}
-
-		indexes := make([]string, 0, len(filtered))
-		for _, index := range filtered {
+		indexes := make([]string, 0, len(s.Indexes))
+		for _, index := range s.Indexes {
 			indexes = append(indexes, index.Name)
 		}
 
