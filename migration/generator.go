@@ -120,22 +120,6 @@ func indexesDifference(i1, i2 []schema.Index) []schema.Index {
 	return diff
 }
 
-// filterSchemas removes ignored collections from the schema list
-func filterSchemas(schemas []schema.Schema) []schema.Schema {
-	filtered := slices.Clone(schemas)
-	return slices.DeleteFunc(filtered, func(s schema.Schema) bool {
-		return slices.Contains(collectionsToIgnore, s.Collection)
-	})
-}
-
-// filterIndexes removes non-modifiable indexes
-func filterIndexes(indexes []schema.Index) []schema.Index {
-	filtered := slices.Clone(indexes)
-	return slices.DeleteFunc(filtered, func(i schema.Index) bool {
-		return slices.Contains(indexesToIgnore, i.Name)
-	})
-}
-
 // readDeclaredSchema reads the declared schema from a file
 func readDeclaredSchema(path string) ([]schema.Schema, error) {
 	f, err := os.Open(path)
