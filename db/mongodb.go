@@ -40,6 +40,19 @@ func ReadCurrentSchema(ctx context.Context, db *mongo.Database) ([]schema.Schema
 			return nil, err
 		}
 
+		for i, indexes := range collectionIndexes {
+			// NOTE: The index is a fts index,
+			// MongoDB doesn't return what fields are used in the key,
+			// So we will do ourselves.
+			if len(indexes.Weights) > 0 {
+				var key bson.D
+				for _, weight := range indexes.Weights {
+					key = append(key, bson.E{Key: weight.Key, Value: "text"})
+				}
+				collectionIndexes[i].Key = key
+			}
+		}
+
 		schemas = append(schemas, schema.Schema{
 			Collection: collectionName,
 			Indexes:    collectionIndexes,
