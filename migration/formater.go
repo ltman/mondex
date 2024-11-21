@@ -24,11 +24,14 @@ func FormatSchemaFile(
 	}
 
 	schemas, err := json.MarshalIndent(prepareSchemas(declared), "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshalling schema: %w", err)
+	}
 
 	if dryRun {
 		logger.Info("Dry-run: showing schema without writing file")
 
-		fmt.Printf("Schema that would be written to %s:\n", schemaFilePath)
+		fmt.Printf("Schema that would be written to %s:\n", schemaFilePath) //nolint:forbidigo
 		if _, err := os.Stdout.Write(schemas); err != nil {
 			return fmt.Errorf("writing declared schema: %w", err)
 		}
@@ -37,7 +40,7 @@ func FormatSchemaFile(
 	}
 
 	logger.Info("Writing current schema to file", "path", schemaFilePath)
-	if err := os.WriteFile(schemaFilePath, schemas, 0644); err != nil {
+	if err := os.WriteFile(schemaFilePath, schemas, 0600); err != nil {
 		return fmt.Errorf("writing declared schema: %w", err)
 	}
 
@@ -45,12 +48,6 @@ func FormatSchemaFile(
 }
 
 func prepareSchemas(schemas []schema.Schema) []schema.Schema {
-	schemas = slices.DeleteFunc(slices.Clone(schemas), func(s schema.Schema) bool {
-		return slices.Contains(collectionsToIgnore, s.Collection)
-	})
-	slices.SortFunc(schemas, func(a, b schema.Schema) int {
-		return cmp.Compare(a.Collection, b.Collection)
-	})
 	for i, sc := range schemas {
 		sc.Indexes = slices.DeleteFunc(sc.Indexes, func(i schema.Index) bool {
 			return slices.Contains(indexesToIgnore, i.Name)
@@ -60,5 +57,11 @@ func prepareSchemas(schemas []schema.Schema) []schema.Schema {
 		})
 		schemas[i] = sc
 	}
+	schemas = slices.DeleteFunc(slices.Clone(schemas), func(s schema.Schema) bool {
+		return slices.Contains(collectionsToIgnore, s.Collection) || len(s.Indexes) == 0
+	})
+	slices.SortFunc(schemas, func(a, b schema.Schema) int {
+		return cmp.Compare(a.Collection, b.Collection)
+	})
 	return schemas
 }

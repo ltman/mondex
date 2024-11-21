@@ -42,12 +42,12 @@ func GenerateMigrationScripts(
 	if dryRun {
 		logger.Info("Dry-run: showing migrations without writing file")
 
-		fmt.Println("Up migration:")
+		fmt.Println("Up migration:") //nolint:forbidigo
 		if _, err := os.Stdout.Write(upCommand); err != nil {
 			return fmt.Errorf("writing up migration to stdout: %w", err)
 		}
 
-		fmt.Println("\nDown migration:")
+		fmt.Println("\nDown migration:") //nolint:forbidigo
 		if _, err := os.Stdout.Write(downCommand); err != nil {
 			return fmt.Errorf("writing down migration to stdout: %w", err)
 		}
@@ -243,12 +243,12 @@ func writeMigrationCommands(upCommand, downCommand []byte, migrationDir, migrati
 	}
 
 	upCommandFilePath := filepath.Join(migrationDir, fmt.Sprintf("%06d_%s.up.json", version, migrationName))
-	if err := os.WriteFile(upCommandFilePath, upCommand, 0644); err != nil {
+	if err := os.WriteFile(upCommandFilePath, upCommand, 0600); err != nil {
 		return fmt.Errorf("failed to write up command: %w", err)
 	}
 
 	downCommandFilePath := filepath.Join(migrationDir, fmt.Sprintf("%06d_%s.down.json", version, migrationName))
-	if err := os.WriteFile(downCommandFilePath, downCommand, 0644); err != nil {
+	if err := os.WriteFile(downCommandFilePath, downCommand, 0600); err != nil {
 		return fmt.Errorf("failed to write down command: %w", err)
 	}
 
