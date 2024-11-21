@@ -1,0 +1,90 @@
+run:
+  # timeout for analysis, e.g. 30s, 5m, default is 1m
+  timeout: 15m
+
+output:
+  sort-results: true
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck # checking for unchecked errors in go programs
+    - errchkjson # errchkjson reports unsupported types to encode to JSON
+    - errorlint # errorlint is a linter for that can be used to find code that will cause problems with the error wrapping scheme introduced in Go 1.13.
+    - forbidigo # forbids identifiers matched by regexps
+    - gosimple # linter for Go source code that specializes in simplifying a code
+    - misspell # finds commonly misspelled English words in comments
+    - nakedret # finds naked returns in functions greater than a specified function length
+    - nolintlint # reports ill-formed or insufficient nolint directives
+    - staticcheck # staticcheck is a go vet on steroids, applying a ton of static analysis checks
+    - stylecheck # a replacement for golint
+    - unused # checks Go code for unused constants, variables, functions and types
+    - govet # Vet examines Go source code and reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
+    - ineffassign # detects when assignments to existing variables are not used
+    - asciicheck # simple linter to check that your code does not contain non-ASCII identifiers
+    - bodyclose # checks whether HTTP response body is closed successfully
+    - durationcheck # check for two durations multiplied together
+    - copyloopvar # detects places where loop variables are copied
+    - goimports # goimports does everything that gofmt does. Additionally, it checks unused imports
+    - gosec # inspects source code for security problems
+    - importas # enforces consistent import aliases
+    - nilerr # finds the code that returns nil even if it checks that the error is not nil.
+    - noctx # noctx finds sending http request without context.Context
+    - unconvert # remove unnecessary type conversions
+    - wastedassign # wastedassign finds wasted assignment statements
+    - gofmt # gofmt checks whether code was gofmt-ed
+    - protogetter # protogetter reports direct reads from proto message fields when getters should be used
+    - testifylint # testifylint reports invalid usage of github.com/stretchr/testify
+    - paralleltest # paralleltest reports if some tests isn't marked as parallel
+
+linters-settings:
+  errcheck:
+    # List of functions to exclude from checking, where each entry is a single function to exclude.
+    exclude-functions:
+      - encoding/json.Marshal
+      - encoding/json.MarshalIndent
+      - (*encoding/json.Encoder).Encode
+
+  errchkjson:
+    # Warn about errors from json encoding functions that are safe to be ignored
+    check-error-free-encoding: true
+    # Issue on struct encoding that doesn't have exported fields.
+    report-no-exported: true
+
+  forbidigo:
+    # Forbid the following identifiers
+    forbid:
+      - 'fmt\.Print.*(# Do not commit print statements\.)?'
+
+  goimports:
+    # A comma-separated list of prefixes, which, if set, checks import paths
+    # with the given prefixes are grouped after 3rd-party packages.
+    local-prefixes: bitbucket.org/ltman
+
+  nakedret:
+    # make an issue if func has more lines of code than this setting, and it has naked returns; default is 30
+    max-func-lines: 0
+
+  nolintlint:
+    # Enable to require an explanation of nonzero length after each nolint directive. Default is false.
+    require-explanation: true
+    # Enable to require nolint directives to mention the specific linter being suppressed. Default is false.
+    require-specific: true
+
+  testifylint:
+    enable:
+      - blank-import
+      - bool-compare
+      - compares
+      - empty
+      - error-is-as
+      - error-nil
+      - expected-actual
+      - float-compare
+      - formatter
+      - go-require
+      - len
+      - negative-positive
+      - nil-compare
+      - require-error
+      - useless-assert
