@@ -93,17 +93,9 @@ func newRootCmd() *cobra.Command {
 		os.Exit(1)
 	}
 
-	cmd.AddCommand(newApplyCmd(), newDiffCmd(), newFormatCmd(), newInspectCmd())
+	cmd.AddCommand(newDiffCmd(), newFormatCmd(), newInspectCmd())
 
 	return cmd
-}
-
-func newApplyCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "apply",
-		Short: "Apply current migrations",
-		RunE:  runApply,
-	}
 }
 
 func newDiffCmd() *cobra.Command {
@@ -150,27 +142,6 @@ func validateConfig(requiredFields []string) error {
 	}
 
 	return nil
-}
-
-func runApply(cmd *cobra.Command, _ []string) error {
-	requiredFields := []string{"mongo_uri", "database_name", "migration_dir"}
-	if dryRun {
-		return fmt.Errorf("apply command doesn't support dry run mode")
-	}
-
-	if err := validateConfig(requiredFields); err != nil {
-		return err
-	}
-
-	return runWithContext(cmd.Context(), func(ctx context.Context, logger *slog.Logger, config Config) error {
-		return migration.ApplyMigrations(
-			ctx,
-			logger,
-			config.MongoURI,
-			config.DatabaseName,
-			config.MigrationDir,
-		)
-	})
 }
 
 func runDiff(cmd *cobra.Command, args []string) error {
