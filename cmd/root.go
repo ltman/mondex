@@ -12,9 +12,10 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/ltman/mondex/migration"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/ltman/mondex/migration"
 )
 
 type Config struct {
@@ -40,7 +41,7 @@ func Execute() {
 	defer stop()
 
 	if err := newRootCmd().ExecuteContext(ctx); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		_, _ = fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

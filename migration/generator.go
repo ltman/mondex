@@ -70,7 +70,7 @@ func generateMigrationScripts(
 	schemaFilePath string,
 ) (upMigration, downMigration []byte, err error) {
 	logger.Debug("Connecting to MongoDB")
-	client, err := db.ConnectToMongoDB(ctx, mongoURI)
+	client, err := db.ConnectToMongoDB(mongoURI)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}

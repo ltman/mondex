@@ -2,22 +2,16 @@ package db
 
 import (
 	"context"
-	"time"
+
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/ltman/mondex/schema"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-const (
-	mongoConnectTimeout = 10 * time.Second
-)
-
-func ConnectToMongoDB(ctx context.Context, uri string) (*mongo.Client, error) {
-	ctx, cancel := context.WithTimeout(ctx, mongoConnectTimeout)
-	defer cancel()
-	return mongo.Connect(ctx, options.Client().ApplyURI(uri))
+func ConnectToMongoDB(uri string) (*mongo.Client, error) {
+	return mongo.Connect(options.Client().ApplyURI(uri))
 }
 
 func ReadCurrentSchema(ctx context.Context, db *mongo.Database) ([]schema.Schema, error) {
